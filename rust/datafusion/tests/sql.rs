@@ -95,6 +95,31 @@ fn parquet_query() {
 }
 
 #[test]
+fn parquet_partition_query() {
+    let mut ctx = ExecutionContext::new();
+    let testdata = env::var("PARQUET_TEST_DATA").expect("PARQUET_TEST_DATA not defined");
+    ctx.register_parquet("alltypes_plain", &format!("{}/partition/", testdata))
+        .unwrap();
+    let sql = "SELECT id, string_col FROM alltypes_plain";
+    execute(&mut ctx, sql);
+}
+
+#[test]
+fn parquet_single_nan_schema() {
+    let mut ctx = ExecutionContext::new();
+    let testdata = env::var("PARQUET_TEST_DATA").expect("PARQUET_TEST_DATA not defined");
+    ctx.register_parquet("single_nan", &format!("{}/single_nan.parquet", testdata))
+        .unwrap();
+    let sql = "SELECT mycol FROM single_nan";
+    let relation = ctx.sql(&sql, 1024 * 1024).unwrap();
+    let mut results = relation.borrow_mut();
+    while let Some(batch) = results.next().unwrap() {
+        assert_eq!(1, batch.num_rows());
+        assert_eq!(1, batch.num_columns());
+    }
+}
+
+#[test]
 fn csv_count_star() {
     let mut ctx = ExecutionContext::new();
     register_aggregate_csv(&mut ctx);
